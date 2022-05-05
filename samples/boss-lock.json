@@ -1,0 +1,14 @@
+{
+	"hash": "d41d8cd98f00b204e9800998ecf8427e",
+	"updated": "2022-05-05T15:17:25.2153977-04:00",
+	"installedModules": {
+		"https://github.com/cachopaweb/clientrest": {
+			"name": "clientrest",
+			"version": "master",
+			"hash": "423011bff9b33a98c0473ee2d8a71a31",
+			"artifacts": {},
+			"failed": false,
+			"changed": false
+		}
+	}
+}
