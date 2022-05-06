@@ -22,11 +22,11 @@ type
     constructor Create(URL: string);
     destructor Destroy; override;
     class function New(URL: string): iClienteREST;
-    function Put(Value: string = ''): TClientResult;
-    function Get(Value: string = ''): TClientResult;
-    function Post(Value: string = ''): TClientResult;overload;
-    function Post(Value: string; Body: TJSONObject): TClientResult;overload;
-    function Post(Value: string; Body: string): TClientResult;overload;
+    function Put(Value: string = ''): string;
+    function Get(Value: string = ''): string;
+    function Post(Value: string = ''): string;overload;
+    function Post(Value: string; Body: TJSONObject): string;overload;
+    function Post(Value: string; Body: string): string;overload;
     function Delete(Value: string = ''): iClienteREST;
     function AddObservador(Value: iObservador): iSujeito;
     function RemoveObservador(Value: iObservador): iSujeito;
@@ -96,12 +96,8 @@ var
   Jo: TJSONObject;
 begin
   Result              := Self;
-  try
-    FRestRequest.Method := rmDELETE;
-    FRestRequest.Execute;
-  except on E: Exception do
-
-  end;
+  FRestRequest.Method := rmDELETE;
+  FRestRequest.Execute;
 end;
 
 destructor TClienteREST.Destroy;
@@ -115,27 +111,13 @@ begin
   inherited;
 end;
 
-function TClienteREST.Get(Value: string = ''): TClientResult;
-var
-  chave: string;
-  Valor: string;
+function TClienteREST.Get(Value: string = ''): string;
 begin
-  try
-    if Value <> '' then
-      FRestClient.BaseURL := Value;
-    FRestRequest.Method   := rmGET;
-    for chave in FListaHeaders.Keys do
-    begin
-      FListaHeaders.TryGetValue(Chave, Valor);
-      FRestRequest.Params.AddHeader(Chave, Valor);
-      FRestRequest.Params.ParameterByName(Chave).Options := [poDoNotEncode];
-    end;
-    FRestRequest.Execute;
-    Result.Content := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
-  except on E: Exception do
-    Result.Error := E.Message;
-  end;
+  if Value <> '' then
+    FRestClient.BaseURL := Value;
+  FRestRequest.Method   := rmGET;
+  FRestRequest.Execute;
+  Result := FRestResponse.Content;
 end;
 
 function TClienteREST.InscreverObservador(Value: iObservador): iClienteREST;
@@ -157,12 +139,13 @@ begin
     FListaObservers[i].Atualizar(Value);
 end;
 
-function TClienteREST.Post(Value: string = ''): TClientResult;
+function TClienteREST.Post(Value: string = ''): string;
 var
   Jo: TJSONObject;
   Chave: string;
   Valor: string;
 begin
+  Result := '';
   try
     if Value <> '' then
       FRestClient.BaseURL := Value;
@@ -175,19 +158,22 @@ begin
     end;
     FRestRequest.Execute;
     FListaHeaders.Clear;
-    Result.Content := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
+    if FRestResponse.ContentLength > 0 then
+    begin
+      Result := FRestResponse.Content;
+    end;
   except on E: Exception do
-    Result.Error := E.Message;
+    raise Exception.Create('Erro ao enviar dados pelo método POST');
   end;
 end;
 
-function TClienteREST.Post(Value: string; Body: TJSONObject): TClientResult;
+function TClienteREST.Post(Value: string; Body: TJSONObject): string;
 var
   Jo: TJSONObject;
   Chave: string;
   Valor: string;
 begin
+  Result := '';
   try
     if Assigned(Body) then
       AddBody(Body);
@@ -202,10 +188,12 @@ begin
     end;
     FRestRequest.Execute;
     FListaHeaders.Clear;
-    Result.Content := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
+    if FRestResponse.ContentLength > 0 then
+    begin
+      Result := FRestResponse.Content;
+    end;
   except on E: Exception do
-    Result.Error := E.Message;
+    raise Exception.Create('Erro ao enviar dados pelo método POST');
   end;
 end;
 
@@ -215,12 +203,13 @@ begin
   FListaObservers.Remove(Value);
 end;
 
-function TClienteREST.Post(Value, Body: string): TClientResult;
+function TClienteREST.Post(Value, Body: string): string;
 var
   Jo: TJSONObject;
   Chave: string;
   Valor: string;
 begin
+  Result := '';
   try
     if Body <> '' then
       AddBody(Body);
@@ -235,35 +224,36 @@ begin
     end;
     FRestRequest.Execute;
     FListaHeaders.Clear;
-    Result.Content := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
+    if FRestResponse.ContentLength > 0 then
+    begin
+      Result := FRestResponse.Content;
+    end;
   except on E: Exception do
-    Result.Error := E.Message;
+    raise Exception.Create('Erro ao enviar dados pelo método POST');
   end;
 end;
 
 
-function TClienteREST.Put(Value: string = ''): TClientResult;
+function TClienteREST.Put(Value: string = ''): string;
 var
   chave: string;
   Valor: string;
 begin
-  try
-    if Value <> '' then
-      FRestClient.BaseURL := Value;
-    FRestRequest.Method := rmPUT;
-    for chave in FListaHeaders.Keys do
-    begin
-      FListaHeaders.TryGetValue(Chave, Valor);
-      FRestRequest.Params.AddHeader(Chave, Valor);
-      FRestRequest.Params.ParameterByName(Chave).Options := [poDoNotEncode];
-    end;
-    FRestRequest.Execute;
-    FListaHeaders.Clear;
-    Result.Content := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
-  except on E: Exception do
-    Result.Error := E.Message;
+  Result := '';
+  if Value <> '' then
+    FRestClient.BaseURL := Value;
+  FRestRequest.Method := rmPUT;
+  for chave in FListaHeaders.Keys do
+  begin
+    FListaHeaders.TryGetValue(Chave, Valor);
+    FRestRequest.Params.AddHeader(Chave, Valor);
+    FRestRequest.Params.ParameterByName(Chave).Options := [poDoNotEncode];
+  end;
+  FRestRequest.Execute;
+  FListaHeaders.Clear;
+  if FRestResponse.ContentLength > 0 then
+  begin
+    Result := FRestResponse.Content;
   end;
 end;
 
