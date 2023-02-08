@@ -40,8 +40,8 @@ requires
   RESTComponents;
 
 contains
-  UnitClienteREST.Model.Interfaces in 'src\UnitClienteREST.Model.Interfaces.pas',
-  UnitClienteREST.Model in 'src\UnitClienteREST.Model.pas',
+  UnitClientREST.Model.Interfaces in 'src\UnitClientREST.Model.Interfaces.pas',
+  UnitClientREST.Model in 'src\UnitClientREST.Model.pas',
   UnitObserver.Model.Interfaces in 'src\UnitObserver.Model.Interfaces.pas';
 
 end.

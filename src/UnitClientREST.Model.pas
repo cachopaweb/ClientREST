@@ -1,41 +1,45 @@
-unit UnitClienteREST.Model;
+unit UnitClientREST.Model;
 
 interface
 
-uses REST.Client,
-     REST.Types,
-     System.Json,
-     IpPeerClient,
-     System.Generics.Collections,
-     UnitClienteREST.Model.Interfaces,
-     UnitObserver.Model.Interfaces, System.Classes;
+uses
+  REST.Client,
+  REST.Authenticator.Basic,
+  REST.Types,
+  System.Json,
+  IpPeerClient,
+  System.Generics.Collections,
+  UnitClientREST.Model.Interfaces,
+  UnitObserver.Model.Interfaces, System.Classes;
 
 type
-  TClienteREST = class(TInterfacedObject, iClienteREST, iSujeito)
+  TClientREST = class(TInterfacedObject, iClientREST, iSujeito)
   private
     FRestClient: TRESTClient;
     FRestRequest: TRESTRequest;
     FRestResponse: TRESTResponse;
     FListaObservers: TList<iObservador>;
     FListaHeaders: TDictionary<string,string>;
+    FBasicAtentication: THTTPBasicAuthenticator;
   public
     constructor Create(URL: string);
     destructor Destroy; override;
-    class function New(URL: string): iClienteREST;
+    class function New(URL: string): iClientREST;
     function Put(Value: string = ''): TClientResult;
     function Get(Value: string = ''): TClientResult;
     function Post(Value: string = ''): TClientResult;overload;
     function Post(Value: string; Body: TJSONObject): TClientResult;overload;
     function Post(Value: string; Body: string): TClientResult;overload;
-    function Delete(Value: string = ''): iClienteREST;
+    function Delete(Value: string = ''): TClientResult;
     function AddObservador(Value: iObservador): iSujeito;
     function RemoveObservador(Value: iObservador): iSujeito;
     function Notificar(Value: TNotificacao): iSujeito;
-    function InscreverObservador(Value: iObservador): iClienteREST;
-    function AddHeader(Par, Valor: string): iClienteREST;
-    function AddBody(Value: string): iClienteREST;overload;
-    function AddBody(Value: TJSONObject): iClienteREST;overload;
-    function AddBody(Value: TStream): iClienteREST;overload;
+    function InscreverObservador(Value: iObservador): iClientREST;
+    function AddHeader(Par, Valor: string): iClientREST;
+    function AddBody(Value: string): iClientREST;overload;
+    function AddBody(Value: TJSONObject): iClientREST;overload;
+    function AddBody(Value: TStream): iClientREST;overload;
+    function AddUserPassword(User: string; Pass: string): iClientREST;
   end;
 
 implementation
@@ -45,34 +49,41 @@ uses
 
 { TClienteREST }
 
-function TClienteREST.AddObservador(Value: iObservador): iSujeito;
+function TClientREST.AddObservador(Value: iObservador): iSujeito;
 begin
   Result := Self;
   FListaObservers.Add(Value);
 end;
 
-function TClienteREST.AddBody(Value: string): iClienteREST;
+function TClientREST.AddUserPassword(User, Pass: string): iClientREST;
+begin
+  Result := Self;
+  FBasicAtentication    := THTTPBasicAuthenticator.Create(User, Pass);
+  FRestClient.Authenticator := FBasicAtentication;
+end;
+
+function TClientREST.AddBody(Value: string): iClientREST;
 begin
   Result := Self;
   FRestRequest.ClearBody;
   FRestRequest.AddBody(Value);
 end;
 
-function TClienteREST.AddBody(Value: TJSONObject): iClienteREST;
+function TClientREST.AddBody(Value: TJSONObject): iClientREST;
 begin
   Result := Self;
   FRestRequest.ClearBody;
   FRestRequest.AddBody(Value);
 end;
 
-function TClienteREST.AddBody(Value: TStream): iClienteREST;
+function TClientREST.AddBody(Value: TStream): iClientREST;
 begin
   Result := Self;
   FRestRequest.ClearBody;
   FRestRequest.AddBody(Value, ctAPPLICATION_OCTET_STREAM);
 end;
 
-function TClienteREST.AddHeader(Par, Valor: string): iClienteREST;
+function TClientREST.AddHeader(Par, Valor: string): iClientREST;
 begin
   Result := Self;
   if not Assigned(FListaHeaders) then
@@ -80,7 +91,7 @@ begin
   FListaHeaders.Add(Par, Valor);
 end;
 
-constructor TClienteREST.Create(URL: string);
+constructor TClientREST.Create(URL: string);
 begin
   FListaObservers       := TList<iObservador>.Create;
   FListaHeaders         := TDictionary<string,string>.Create;
@@ -91,20 +102,24 @@ begin
   FRestRequest.Response := FRestResponse;
 end;
 
-function TClienteREST.Delete(Value: string = ''): iClienteREST;
+function TClientREST.Delete(Value: string = ''): TClientResult;
 var
   Jo: TJSONObject;
 begin
-  Result              := Self;
   try
     FRestRequest.Method := rmDELETE;
     FRestRequest.Execute;
+    Result.Content := FRestResponse.Content;
+    Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 
-destructor TClienteREST.Destroy;
+destructor TClientREST.Destroy;
 begin
   FreeAndNil(FRestClient);
   FreeAndNil(FRestRequest);
@@ -112,10 +127,12 @@ begin
   FreeAndNil(FListaObservers);
   if Assigned(FListaHeaders) then
     FreeAndNil(FListaHeaders);
+  if Assigned(FBasicAtentication) then
+    FBasicAtentication.DisposeOf;
   inherited;
 end;
 
-function TClienteREST.Get(Value: string = ''): TClientResult;
+function TClientREST.Get(Value: string = ''): TClientResult;
 var
   chave: string;
   Valor: string;
@@ -134,22 +151,25 @@ begin
     Result.Content := FRestResponse.Content;
     Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-    Result.Error := E.Message;
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 
-function TClienteREST.InscreverObservador(Value: iObservador): iClienteREST;
+function TClientREST.InscreverObservador(Value: iObservador): iClientREST;
 begin
   Result := Self;
   AddObservador(Value);
 end;
 
-class function TClienteREST.New(URL: string): iClienteREST;
+class function TClientREST.New(URL: string): iClientREST;
 begin
   Result := Self.Create(URL);
 end;
 
-function TClienteREST.Notificar(Value: TNotificacao): iSujeito;
+function TClientREST.Notificar(Value: TNotificacao): iSujeito;
 var
   i: Integer;
 begin
@@ -157,7 +177,7 @@ begin
     FListaObservers[i].Atualizar(Value);
 end;
 
-function TClienteREST.Post(Value: string = ''): TClientResult;
+function TClientREST.Post(Value: string = ''): TClientResult;
 var
   Jo: TJSONObject;
   Chave: string;
@@ -178,11 +198,14 @@ begin
     Result.Content := FRestResponse.Content;
     Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-    Result.Error := E.Message;
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 
-function TClienteREST.Post(Value: string; Body: TJSONObject): TClientResult;
+function TClientREST.Post(Value: string; Body: TJSONObject): TClientResult;
 var
   Jo: TJSONObject;
   Chave: string;
@@ -205,17 +228,20 @@ begin
     Result.Content := FRestResponse.Content;
     Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-    Result.Error := E.Message;
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 
-function TClienteREST.RemoveObservador(Value: iObservador): iSujeito;
+function TClientREST.RemoveObservador(Value: iObservador): iSujeito;
 begin
   Result := Self;
   FListaObservers.Remove(Value);
 end;
 
-function TClienteREST.Post(Value, Body: string): TClientResult;
+function TClientREST.Post(Value, Body: string): TClientResult;
 var
   Jo: TJSONObject;
   Chave: string;
@@ -238,12 +264,15 @@ begin
     Result.Content := FRestResponse.Content;
     Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-    Result.Error := E.Message;
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 
 
-function TClienteREST.Put(Value: string = ''): TClientResult;
+function TClientREST.Put(Value: string = ''): TClientResult;
 var
   chave: string;
   Valor: string;
@@ -263,7 +292,10 @@ begin
     Result.Content := FRestResponse.Content;
     Result.StatusCode := FRestResponse.StatusCode;
   except on E: Exception do
-    Result.Error := E.Message;
+    begin
+      Result.Content := FRestResponse.Content;
+      Result.Error := E.Message;
+    end;
   end;
 end;
 

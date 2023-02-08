@@ -24,14 +24,14 @@ implementation
 {$R *.dfm}
 
 uses
-  UnitClienteREST.Model.Interfaces,
-  UnitClienteREST.Model;
+  UnitClientREST.Model.Interfaces,
+  UnitClientREST.Model;
 
 procedure TFrmPrincipal.Button1Click(Sender: TObject);
 var
   LResult: TClientResult;
 begin
-  LResult := TClienteREST.New('https://portalsoft.net.br/Ocorrencias').Get();
+  LResult := TClientREST.New('sua-api.com.br').Get();
   if LResult.StatusCode = 200 then
   begin
     showMessage(LResult.Content);

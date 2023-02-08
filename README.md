@@ -11,13 +11,13 @@ Sample
 
 uses 
   System.SysUtils,
-  UnitClienteREST.Model.Interfaces,
-  UnitClienteREST.Model;
+  UnitClientREST.Model.Interfaces,
+  UnitClientREST.Model;
 
 var
   LResult: TClientResult;
 begin
-  LResult := TClienteREST.New('http://sua-api.com.br').Get();
+  LResult := TClientREST.New('http://sua-api.com.br').Get();
   if LResult.StatusCode = 200 then
   begin
     showMessage(LResult.Content);
