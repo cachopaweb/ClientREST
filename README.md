@@ -3,7 +3,7 @@ Class for utilities REST Client
 
 ### For install in your project using [boss](https://github.com/HashLoad/boss):
 ``` sh
-$ boss install github.com/CachopaWeb/client-rest
+$ boss install github.com/CachopaWeb/clientREST
 ```
 
 Sample 
