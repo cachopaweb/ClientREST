@@ -29,7 +29,6 @@ type
     function Get(Value: string = ''): TClientResult;
     function Post(Value: string = ''): TClientResult; overload;
 		function Post(Value: string; Body: TJSONObject): TClientResult; overload;
-		function Post(Value: string; Body: TJSONArray): TClientResult;overload;
 		function Post(Value: string; Body: string): TClientResult; overload;
 		function Delete(Value: string = ''): TClientResult;
 		function AddObservador(Value: iObservador): iSujeito;
@@ -39,7 +38,6 @@ type
 		function AddHeader(Par, Valor: string): iClientREST;
 		function AddBody(Value: string): iClientREST; overload;
 		function AddBody(Value: TJSONObject): iClientREST; overload;
-		function AddBody(Value: TJSONArray): iClientREST; overload;
 		function AddBody(Value: TStream): iClientREST; overload;
     function AddUserPassword(User: string; Pass: string): iClientREST;
   end;
@@ -66,7 +64,7 @@ end;
 
 function TClientREST.AddBody(Value: string): iClientREST;
 begin
-  Result := Self;
+	Result := Self;
   FRestRequest.ClearBody;
   FRestRequest.AddBody(Value);
 end;
@@ -83,13 +81,6 @@ begin
 	Result := Self;
 	FRestRequest.ClearBody;
 	FRestRequest.AddBody(Value, ctAPPLICATION_OCTET_STREAM);
-end;
-
-function TClientREST.AddBody(Value: TJSONArray): iClientREST;
-begin
-	Result := Self;
-	FRestRequest.ClearBody;
-	FRestRequest.AddBody<TJSONArray>(Value);
 end;
 
 function TClientREST.AddHeader(Par, Valor: string): iClientREST;
@@ -288,38 +279,6 @@ begin
       Result.StatusCode := FRestResponse.StatusCode;
     end;
   end;
-end;
-
-function TClientREST.Post(Value: string; Body: TJSONArray): TClientResult;
-var
-  Jo   : TJSONObject;
-  chave: string;
-  Valor: string;
-begin
-  try
-    if Assigned(Body) then
-      AddBody(Body);
-    if Value <> '' then
-      FRestClient.BaseURL := Value;
-    FRestRequest.Method   := rmPOST;
-    for chave in FListaHeaders.Keys do
-    begin
-      FListaHeaders.TryGetValue(chave, Valor);
-      FRestRequest.Params.AddHeader(chave, Valor);
-      FRestRequest.Params.ParameterByName(chave).Options := [poDoNotEncode];
-    end;
-    FRestRequest.Execute;
-    FListaHeaders.Clear;
-    Result.Content    := FRestResponse.Content;
-    Result.StatusCode := FRestResponse.StatusCode;
-  except
-    on E: Exception do
-    begin
-      Result.Content := FRestResponse.Content;
-      Result.Error   := E.Message;
-      Result.StatusCode := FRestResponse.StatusCode;
-    end;
-	end;
 end;
 
 function TClientREST.Put(Value: string = ''): TClientResult;
